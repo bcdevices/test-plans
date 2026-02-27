@@ -1,0 +1,59 @@
+# =============================================================================
+# Title:       nRF54L Flashing Demo
+# Description: Programs an nRF54L15DK (SUB-75) via J-Link Base Compact (SKU-48)
+#              connected to a PER-101 Test Agent (SKU-7), controlled by a
+#              PLT-300A (SKU-20).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# BOM - Test Station
+# -----------------------------------------------------------------------------
+# SKU-20   PLT-300A               Production Line Tool controller
+# SKU-7    PER-101 Test Agent     Raspberry Pi 5 running AgentOS
+# SKU-48   J-Link Base Compact    SWD programmer/debugger
+# SUB-75   nRF54L15DK             Device Under Test (DUT)
+
+# -----------------------------------------------------------------------------
+# Test Station Wiring Diagram
+# -----------------------------------------------------------------------------
+# SKU A            | SKU A Connector   | Cable              | SKU B Connector   | SKU B
+# -----------------|-------------------|--------------------|-------------------|------------------
+# SKU-20 PLT-300A  | USB-A (Port 6)    | USB-A to USB-C     | USB-C (PLT port)  | SKU-7 PER-101
+# SKU-7  PER-101   | USB-A (Port 2)    | USB-A to USB-Mini-B| USB-Mini-B        | SKU-48 J-Link
+# SKU-48 J-Link    | 20-pin IDC (out)  | 20-pin IDC cable   | SWD header        | SUB-75 nRF54L15DK
+
+# -----------------------------------------------------------------------------
+# Test Plan
+# -----------------------------------------------------------------------------
+
+title: "nRF54L Flashing Demo"
+description: "Flash nRF54L15DK via J-Link Base Compact on PER-101 Test Agent"
+
+suite:
+
+  - title: "Defines"
+    steps:
+      - command: define FIRMWARE "zephyr.hex"
+
+  - title: "Setup Programming Session"
+    steps:
+      - command: agentCfg PROGSBC
+        path: "6" 
+        with:
+          - "%FIRMWARE%"
+
+  - title: "Power DUT"
+    steps:
+      - command: power 3V3 on
+      - command: sleepms 500
+
+  - title: "Program nRF54L via J-Link"
+    steps:
+      - command: agentExec PROGSBC "nrfutil device recover --log-output=stdout --json"
+        timeout: 30s
+      - command: agentExec PROGSBC "nrfutil device program --firmware %FIRMWARE% --log-output=stdout --json"
+        timeout: 120s
+
+teardown:
+  steps:
+    - command: power 3V3 off
