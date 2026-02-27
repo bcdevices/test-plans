@@ -10,7 +10,6 @@
 # -----------------------------------------------------------------------------
 # SKU-20   PLT-300A               Production Line Tool controller
 # SKU-7    PER-101 Test Agent     Raspberry Pi 5 running AgentOS
-# SKU-48   J-Link Base Compact    SWD programmer/debugger
 # SUB-75   nRF54L15DK             Device Under Test (DUT)
 
 # -----------------------------------------------------------------------------
@@ -30,7 +29,7 @@ title: "nRF54L Flashing Demo"
 description: "Flash nRF54L15DK via J-Link Base Compact on PER-101 Test Agent"
 
 suite:
-
+  
   - title: "Defines"
     steps:
       - command: define FIRMWARE "zephyr.hex"
