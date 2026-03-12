@@ -10,6 +10,7 @@
 # -----------------------------------------------------------------------------
 # SKU-20   PLT-300A               Production Line Tool controller
 # SKU-7    PER-101 Test Agent     Raspberry Pi 5 running agentOS
+# J-Link   J-Link                 J-LInK Programmer
 # SUB-3    Bento                  Device Under Test (DUT)
 
 # -----------------------------------------------------------------------------
@@ -18,7 +19,8 @@
 # SKU A            | SKU A Connector   | Cable              | SKU B Connector   | SKU B
 # -----------------|-------------------|--------------------|-------------------|------------------
 # SKU-20 PLT-300A  | USB-A (Port 6)    | USB-A to USB-C     | USB-C (PLT port)  | SKU-7 PER-101
-# SKU-7  PER-101   | USB-A (Port 2)    | USB-A to TC        | J1 (Tac Connect)  | SUB-3 Bento
+# SKU-7  PER-101   | USB-A (Port 2)    | USB-A to USB-B     | J-Link
+# J-Link           | 20-pin Header     | J1 (Tac Connect)   | SUB-3 Bento
 # Power Must be suppleid to Bento!
 
 # -----------------------------------------------------------------------------
@@ -46,7 +48,7 @@ suite:
       - command: power 3V3 on
       - command: sleepms 500
 
-  - title: "Program RP2350B via onboard J-Link"
+  - title: "Program RP2350B via JLink"
     steps:
       - command: agentExec PROGSBC "printf 'r\nh\nloadfile %FIRMWARE%\nr\ng\nq\n' | JLinkExe -device RP2350_M33_0 -if SWD -speed 4000 -autoconnect 1"
         timeout: 120s
