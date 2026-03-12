@@ -10,7 +10,7 @@
 # -----------------------------------------------------------------------------
 # SKU-20   PLT-300A               Production Line Tool controller
 # SKU-7    PER-101 Test Agent     Raspberry Pi 5 running agentOS
-# J-Link   J-Link                 J-LInK Programmer
+# J-Link   J-Link                 J-LinK Programmer
 # SUB-3    Bento                  Device Under Test (DUT)
 
 # -----------------------------------------------------------------------------
@@ -20,7 +20,7 @@
 # -----------------|-------------------|--------------------|-------------------|------------------
 # SKU-20 PLT-300A  | USB-A (Port 6)    | USB-A to USB-C     | USB-C (PLT port)  | SKU-7 PER-101
 # SKU-7  PER-101   | USB-A (Port 2)    | USB-A to USB-B     | J-Link
-# J-Link           | 20-pin Header     | J1 (Tac Connect)   | SUB-3 Bento
+# J-Link           | 20-pin Header     | J1 (Tag Connect)   | SUB-3 Bento
 # Power Must be suppleid to Bento!
 
 # -----------------------------------------------------------------------------
