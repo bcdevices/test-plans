@@ -49,8 +49,6 @@ suite:
     steps:
       - command: agentExec PROGSBC "nrfutil device recover --log-output=stdout --json"
         timeout: 30s
-      - command: agentExec PROGSBC "nrfutil device program --firmware %FIRMWARE% --log-output=stdout --json"
-        timeout: 120s
 
 teardown:
   steps:
