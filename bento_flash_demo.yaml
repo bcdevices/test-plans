@@ -3,55 +3,74 @@
 # Description: Programs a Bento Board (SUB-3) via onboard J-Link
 #              connected to a PER-101 Test Agent (SKU-7), controlled by a
 #              PLT-300A (SKU-20).
+# Change Log:
+#   v1.1 - Correct hex file name
+#   v1.1.1 - Switch to interfacing with the Agent UART + fix path problems
+#   v1.2   - Improved error detection logic, JLinkExe ALWAYS returns 0 even on
+#            a flashing failure. Currently we scan for a flash download speed +
+#            OK string. Reduced timeout to 5s on this step.
 # =============================================================================
 
 # -----------------------------------------------------------------------------
 # BOM - Test Station
 # -----------------------------------------------------------------------------
-# SKU-20   PLT-300A               Production Line Tool controller
-# SKU-7    PER-101 Test Agent     Raspberry Pi 5 running agentOS
-# J-Link   J-Link                 J-LinK Programmer
-# SUB-3    Bento                  Device Under Test (DUT)
+# SKU    | Model No.            | Model Name
+# -------|----------------------|---------------------------
+# SKU-20 | PLT-300A             | Production Line Tool
+# SKU-7  | PER-101              | Test Agent
+# —      | J-Link Base Compact  | J-Link Programmer
+# SUB-3  | Bento Board 1        | Device Under Test
 
 # -----------------------------------------------------------------------------
-# Test Station Wiring Diagram
+# Test Station Diagram (TSD)
 # -----------------------------------------------------------------------------
-# SKU A            | SKU A Connector   | Cable              | SKU B Connector   | SKU B
-# -----------------|-------------------|--------------------|-------------------|------------------
-# SKU-20 PLT-300A  | USB-A (Port 6)    | USB-A to USB-C     | USB-C (PLT port)  | SKU-7 PER-101
-# SKU-7  PER-101   | USB-A (Port 2)    | USB-A to USB-B     | J-Link
-# J-Link           | 20-pin Header     | J1 (Tag Connect)   | SUB-3 Bento
-# Power Must be suppleid to Bento!
+# Device A | Device A Connector | Cable                    | Device B Connector | Device B
+# ---------|--------------------|--------------------------|--------------------|---------------------
+# SKU-20   | USB-A (Port 6)     | USB-A to USB-C, 1m (—)  | USB-C (PLT port)   | SKU-7
+# SKU-7    | USB-A (Port 2)     | USB-A to USB-B, 1m (—)  | USB-B              | J-Link Base Compact
+# J-Link   | 20-pin Header      | J1 Tag Connect (—)      | Debug Header       | SUB-3
 
 # -----------------------------------------------------------------------------
 # Test Plan
 # -----------------------------------------------------------------------------
 
 title: "Bento Flashing Demo"
-description: "Flash RP2350B via PER-101 Test Agent"
+description: "Flash RP2350B via PER-101 Test Agent and J-Link Commander"
 
 suite:
-  
+
   - title: "Defines"
     steps:
-      - command: define FIRMWARE "zephyr.hex"
+      - command: define FIRMWARE "blinky.hex"
+      - command: define SBC.uart "UART2"
 
   - title: "Setup Programming Session"
     steps:
-      - command: agentCfg PROGSBC
-        path: "6" 
+      - command: agentCfg PROGSBC %SBC.uart%
         with:
           - "%FIRMWARE%"
 
   - title: "Power DUT"
     steps:
       - command: power 3V3 on
-      - command: sleepms 500
+      - command: sleepms 1500
 
   - title: "Program RP2350B via JLink"
     steps:
-      - command: agentExec PROGSBC "printf 'r\nh\nloadfile %FIRMWARE%\nr\ng\nq\n' | JLinkExe -device RP2350_M33_0 -if SWD -speed 4000 -autoconnect 1"
-        timeout: 120s
+      - command: uart %SBC.uart%
+        send: |
+          /opt/SEGGER/JLink/JLinkExe -device RP2350_M33_0 -if SWD -speed 4000 -autoconnect 1
+          r
+          h
+          loadfile /run/pltagent/mnt/%FIRMWARE%
+          r
+          g
+          q
+        extract: "Program speed: (\\d+)"
+        extractKey: JLINK_RETVAL
+        timeout: 5s
+      - command: eval "JLINK_RETVAL != ''"
+        fail: "J-Link programming failed; check UART2 logs"
 
 teardown:
   steps:
