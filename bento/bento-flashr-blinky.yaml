@@ -1,0 +1,56 @@
+# =============================================================================
+# Title:       Bento Flashing Demo
+# Description: Programs a Bento Board 2 (SUB-67) via Flashr
+#              connected to a PER-101 Test Agent (SKU-7), controlled by a
+#              PLT-106 (SKU-6).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# BOM - Test Station
+# -----------------------------------------------------------------------------
+# SKU    | Model No.            | Model Name
+# -------|----------------------|---------------------------
+# SKU-6  | PLT-106              | Production Line Tool
+# SKU-7  | PER-101              | Test Agent
+# X | X  | Flashr
+# SUB-67 | Bento Board 2        | Device Under Test
+
+# -----------------------------------------------------------------------------
+# Test Station Diagram (TSD)
+# -----------------------------------------------------------------------------
+# Device A | Device A Connector | Cable                    | Device B Connector | Device B
+# ---------|--------------------|--------------------------|--------------------|---------------------
+# SKU-6    | USB-A (Port 1)     | USB-A to USB-C, 1m (—)   | USB-C (PLT port)   | SKU-7
+# SKU-7    | USB-A (Port 2)     | USB-A to USB-B, 1m (—)   | USB-B              | J-Link Base Compact
+# Flashr   | 20-pin Header      | 20-pin to 6-pin TC       | J1 Tag Connect     | SUB-67
+# SKU-6    | USB-A (Port 2)     | USB-A to USB-C, 1m (—)   | USB-C (DUT)        | SUB-67
+
+# -----------------------------------------------------------------------------
+# Test Plan
+# -----------------------------------------------------------------------------
+
+title: "Bento Flashing Demo"
+description: "Flash RP2350B via PER-101 Test Agent and Flashr"
+
+suite:
+  - title: "Defines"
+    steps:
+      - command: define FIRMWARE.filename "bento_blinky.hex"
+      - command: define AGENT.vidpid "6666:8001"
+      - command: define FIRMWARE.target "rp2350"
+      - command: define DUT.vidpid "2fe3:0004"
+
+  - title: "Setup Programming Session"
+    steps:
+      - command: usb detect
+        id: "%AGENT.vidpid%"
+        timeout: 30s
+      - command: agentCfg PROGSBC UART2
+        id: "%AGENT.vidpid%"
+        retry: 3
+        with:
+          - "%FIRMWARE.filename%"
+  - title: "Program RP2350B via Flashr"
+    steps:
+      - command: agentExec PROGSBC "flashr-flash %FIRMWARE.target% /run/pltagent/mnt/%FIRMWARE.filename%"
+        timeout: 30s

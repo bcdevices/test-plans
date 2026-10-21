@@ -1,0 +1,226 @@
+# =============================================================================
+# Title:       Bento App Subsystem Test
+# Description: Exercises the Bento Board 2 (SUB-67) app firmware's peripheral
+#              shell commands (app, bento sensor/ledstrip/buzzer) over the
+#              DUT's Zephyr USB-CDC shell, controlled by a PLT-106 (SKU-6).
+#              Expects bento_app.hex to already be flashed
+#              (see bento-app-checkversion.yaml).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# BOM - Test Station
+# -----------------------------------------------------------------------------
+# SKU    | Model No.            | Model Name
+# -------|----------------------|---------------------------
+# SKU-6  | PLT-106              | Production Line Tool
+# SUB-67 | Bento Board 2        | Device Under Test
+
+# -----------------------------------------------------------------------------
+# Test Station Diagram (TSD)
+# -----------------------------------------------------------------------------
+# Device A | Device A Connector | Cable                    | Device B Connector | Device B
+# ---------|--------------------|--------------------------|--------------------|---------------------
+# SKU-6    | USB-A (Port 2)     | USB-A to USB-C, 1m (—)   | USB-C (DUT)        | SUB-67
+
+# -----------------------------------------------------------------------------
+# Test Plan
+# -----------------------------------------------------------------------------
+
+# Response matching notes:
+# - Match on command output, not on the prompt. The prompt can still be in
+#   the receive buffer from the previous command, so expecting it can pass
+#   before the DUT has answered.
+# - The DUT echoes each command, so expect/extract text must not also appear
+#   in the echoed command line (e.g. "ledstrip off" is in "bento ledstrip off").
+# - extract regexes must match within one line; don't anchor on a preceding
+#   \r\n.
+# - The LED strip and buzzer have no feedback path to the PLT, so these steps
+#   check that the driver accepted the request, not that light or sound came
+#   out.
+title: "Bento App Subsystem Test"
+
+suite:
+  - ident: DEFS
+    title: "Defines"
+    steps:
+      - command: define DUT.vidpid "2fe3:0004"
+      - command: define DUT.prompt "bento:~$"
+      - command: define EXPECTED_APP_VERSION "1.0.0"
+      # BME280 plausibility limits for an indoor test station. Pressure is
+      # absolute (not sea-level corrected): ~101 kPa at sea level, ~89 kPa
+      # at 1100 m.
+      - command: define TEMP_MIN_C 5
+      - command: define TEMP_MAX_C 45
+      - command: define HUM_MIN_RH 5
+      - command: define HUM_MAX_RH 95
+      - command: define PRES_MIN_KPA 70
+      - command: define PRES_MAX_KPA 110
+
+  - ident: CONN
+    title: "Connect to DUT Shell"
+    steps:
+      - command: usb detect
+        title: "Detect DUT USB-CDC device"
+        id: "%DUT.vidpid%"
+        timeout: 10s
+        fail: "DUT USB-CDC device not detected. Check the DUT USB cable to the PLT."
+      - command: uartCfg UART3 115200
+        title: "Configure UART to DUT"
+        id: "%DUT.vidpid%"
+        fail: "Failed to configure UART3 for DUT USB-CDC shell"
+      - command: uart UART3
+        title: "Wait for DUT shell prompt"
+        send: "\n"
+        expect: "%DUT.prompt%"
+        timeout: 1s
+        retry: 10
+        fail: "DUT shell did not respond with the bento prompt. Is bento_app.hex flashed?"
+
+  - ident: APP
+    title: "App Version Information"
+    steps:
+      - command: uart UART3
+        title: "Query app version"
+        send: "app version\n"
+        extract: "(\\d+\\.\\d+\\.\\d+\\S*)\r\n"
+        extractKey: APP_VERSION
+        timeout: 2s
+        retry: 2
+        fail: "DUT did not report an app version"
+      - command: eval APP_VERSION == EXPECTED_APP_VERSION
+        title: "Check app version"
+        fail: "DUT app version does not match EXPECTED_APP_VERSION"
+      - command: uart UART3
+        title: "Query app build version"
+        send: "app build-version\n"
+        extract: "^(v?[0-9A-Za-z.+-]*[0-9a-f]{7,})\r\n"
+        extractKey: APP_BUILD_VERSION
+        timeout: 2s
+        retry: 2
+        fail: "DUT did not report a build version"
+
+  - ident: SENSOR
+    title: "BME280 Environmental Sensor"
+    steps:
+      # Each reading is on its own line, and extract matches one line, so
+      # read the sensor once per value.
+      - command: uart UART3
+        title: "Read temperature"
+        send: "bento sensor read\n"
+        extract: "temp: (-?\\d+\\.\\d+) C\r\n"
+        extractKey: TEMP_C
+        timeout: 2s
+        retry: 2
+        fail: "No temperature from BME280. Check for 'BME280 device not ready' at boot."
+      - command: eval numeric(TEMP_C) >= numeric(TEMP_MIN_C) && numeric(TEMP_C) <= numeric(TEMP_MAX_C)
+        title: "Temperature in range"
+        fail: "Temperature outside TEMP_MIN_C..TEMP_MAX_C"
+      - command: uart UART3
+        title: "Read humidity"
+        send: "bento sensor read\n"
+        extract: "hum: +(\\d+\\.\\d+) .RH\r\n"
+        extractKey: HUM_RH
+        timeout: 2s
+        retry: 2
+        fail: "No humidity reading from BME280"
+      - command: eval numeric(HUM_RH) >= numeric(HUM_MIN_RH) && numeric(HUM_RH) <= numeric(HUM_MAX_RH)
+        title: "Humidity in range"
+        fail: "Humidity outside HUM_MIN_RH..HUM_MAX_RH"
+      - command: uart UART3
+        title: "Read pressure"
+        send: "bento sensor read\n"
+        extract: "pres: (\\d+\\.\\d+) kPa\r\n"
+        extractKey: PRES_KPA
+        timeout: 2s
+        retry: 2
+        fail: "No pressure reading from BME280"
+      - command: eval numeric(PRES_KPA) >= numeric(PRES_MIN_KPA) && numeric(PRES_KPA) <= numeric(PRES_MAX_KPA)
+        title: "Pressure in range"
+        fail: "Pressure outside PRES_MIN_KPA..PRES_MAX_KPA"
+
+  - ident: LED
+    title: "WS2812 LED Strip"
+    steps:
+      - command: uart UART3
+        title: "Set LED strip red"
+        send: "bento ledstrip set 255 0 0\n"
+        expect: "ledstrip set to 255,0,0"
+        timeout: 2s
+        retry: 2
+        fail: "LED strip did not accept red"
+      - command: uart UART3
+        title: "Set LED strip green"
+        send: "bento ledstrip set 0 255 0\n"
+        expect: "ledstrip set to 0,255,0"
+        timeout: 2s
+        retry: 2
+        fail: "LED strip did not accept green"
+      - command: uart UART3
+        title: "Set LED strip blue"
+        send: "bento ledstrip set 0 0 255\n"
+        expect: "ledstrip set to 0,0,255"
+        timeout: 2s
+        retry: 2
+        fail: "LED strip did not accept blue"
+      - command: uart UART3
+        title: "Set LED strip white"
+        send: "bento ledstrip set 255 255 255\n"
+        expect: "ledstrip set to 255,255,255"
+        timeout: 2s
+        retry: 2
+        fail: "LED strip did not accept white"
+      - command: uart UART3
+        title: "Reject out-of-range channel"
+        send: "bento ledstrip set 256 0 0\n"
+        expect: "each channel must be 0..255"
+        timeout: 2s
+        retry: 2
+        fail: "LED strip accepted an out-of-range channel value"
+      - command: uart UART3
+        title: "Turn LED strip off"
+        send: "bento ledstrip off\n"
+        # The echoed command contains "ledstrip off" too; require the
+        # response line to start with it.
+        extract: "^(ledstrip off)\r\n"
+        extractKey: LED_OFF
+        timeout: 2s
+        retry: 2
+        fail: "LED strip did not turn off"
+
+  - ident: BUZZ
+    title: "PWM Buzzer"
+    steps:
+      - command: uart UART3
+        title: "Beep with defaults"
+        send: "bento buzzer beep\n"
+        expect: "beeped 880 Hz for 200 ms"
+        timeout: 2s
+        retry: 2
+        fail: "Buzzer default beep failed"
+      - command: uart UART3
+        title: "Beep 2 kHz for 100 ms"
+        send: "bento buzzer beep 2000 100\n"
+        expect: "beeped 2000 Hz for 100 ms"
+        timeout: 2s
+        retry: 2
+        fail: "Buzzer 2 kHz beep failed"
+      - command: uart UART3
+        title: "Reject zero frequency"
+        send: "bento buzzer beep 0 100\n"
+        expect: "frequency must be > 0"
+        timeout: 2s
+        retry: 2
+        fail: "Buzzer accepted a zero frequency"
+      - command: uart UART3
+        title: "Play note sweep"
+        send: "bento buzzer sweep\n"
+        expect: "sweep complete"
+        timeout: 5s
+        retry: 1
+        fail: "Buzzer sweep did not complete"
+
+teardown:
+  steps:
+    - command: uart UART3
+      title: "Leave LED strip off"
+      send: "bento ledstrip off\n"

@@ -1,0 +1,132 @@
+# =============================================================================
+# Title:       Bento App Operator Checks
+# Description: Operator-verified checks of the Bento Board 2 (SUB-67) buzzer
+#              and WS2812 LED strip, driven over the DUT's Zephyr USB-CDC
+#              shell by a PLT-106 (SKU-6). The operator confirms each result
+#              with Pass/Fail on the PLT display.
+#              Expects bento_app.hex to already be flashed
+#              (see bento-app-checkversion.yaml).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# BOM - Test Station
+# -----------------------------------------------------------------------------
+# SKU    | Model No.            | Model Name
+# -------|----------------------|---------------------------
+# SKU-6  | PLT-106              | Production Line Tool
+# SUB-67 | Bento Board 2        | Device Under Test
+
+# -----------------------------------------------------------------------------
+# Test Station Diagram (TSD)
+# -----------------------------------------------------------------------------
+# Device A | Device A Connector | Cable                    | Device B Connector | Device B
+# ---------|--------------------|--------------------------|--------------------|---------------------
+# SKU-6    | USB-A (Port 2)     | USB-A to USB-C, 1m (—)   | USB-C (DUT)        | SUB-67
+
+# -----------------------------------------------------------------------------
+# Test Plan
+# -----------------------------------------------------------------------------
+
+# The buzzer plays while the operator prompt is shown (uartExpect, operator,
+# uartAwait). The shell has no delay command, so the LED cycle has to run
+# from the plan before the prompt. BUZZ and LED each get two attempts
+# (pltrunner treats retry: N as N attempts in total), so an
+# operator who missed it can see or hear it again by pressing Fail.
+title: "Bento App Operator Checks"
+
+suite:
+  - ident: DEFS
+    title: "Defines"
+    steps:
+      - command: define DUT.vidpid "2fe3:0004"
+      - command: define DUT.prompt "bento:~$"
+
+  - ident: CONN
+    title: "Connect to DUT Shell"
+    steps:
+      - command: usb detect
+        title: "Detect DUT USB-CDC device"
+        id: "%DUT.vidpid%"
+        timeout: 10s
+        fail: "DUT USB-CDC device not detected. Check the DUT USB cable to the PLT."
+      - command: uartCfg UART3 115200
+        title: "Configure UART to DUT"
+        id: "%DUT.vidpid%"
+        fail: "Failed to configure UART3 for DUT USB-CDC shell"
+      - command: uart UART3
+        title: "Wait for DUT shell prompt"
+        send: "\n"
+        expect: "%DUT.prompt%"
+        timeout: 1s
+        retry: 10
+        fail: "DUT shell did not respond with the bento prompt. Is bento_app.hex flashed?"
+      - command: uart UART3
+        title: "Start with LED strip off"
+        send: "bento ledstrip off\n"
+        extract: "^(ledstrip off)\r\n"
+        extractKey: LED_OFF
+        timeout: 2s
+        retry: 2
+        fail: "LED strip did not turn off"
+
+  - ident: BUZZ
+    title: "Buzzer Audible and Consistent"
+    retry: 2
+    steps:
+      # Arm the expectation, start a long beep without waiting, and ask the
+      # operator while it plays. uartAwait then confirms the DUT finished it.
+      - command: uartExpect UART3 "beeped 880 Hz for 3000 ms"
+        title: "Arm beep confirmation"
+      - command: uart UART3 noflush
+        title: "Start 3 s beep"
+        send: "bento buzzer beep 880 3000\n"
+      - command: operator "Is the buzzer sounding a steady, clear tone?"
+        title: "Operator confirms buzzer"
+        timeout: 60s
+        fail: "Operator: buzzer not audible or not steady"
+      - command: uartAwait UART3 5
+        title: "DUT confirms beep"
+        fail: "DUT did not report the beep"
+
+  - ident: LED
+    title: "LED Strip Color Cycle"
+    retry: 2
+    steps:
+      - command: uart UART3
+        title: "Set LED strip red"
+        send: "bento ledstrip set 255 0 0\n"
+        expect: "ledstrip set to 255,0,0"
+        timeout: 2s
+        fail: "LED strip did not accept red"
+      - command: sleepms 1000
+      - command: uart UART3
+        title: "Set LED strip green"
+        send: "bento ledstrip set 0 255 0\n"
+        expect: "ledstrip set to 0,255,0"
+        timeout: 2s
+        fail: "LED strip did not accept green"
+      - command: sleepms 1000
+      - command: uart UART3
+        title: "Set LED strip blue"
+        send: "bento ledstrip set 0 0 255\n"
+        expect: "ledstrip set to 0,0,255"
+        timeout: 2s
+        fail: "LED strip did not accept blue"
+      - command: sleepms 1000
+      - command: uart UART3
+        title: "Turn LED strip off"
+        send: "bento ledstrip off\n"
+        extract: "^(ledstrip off)\r\n"
+        extractKey: LED_OFF
+        timeout: 2s
+        fail: "LED strip did not turn off"
+      - command: operator "Did the LED strip cycle red, green, blue?"
+        title: "Operator confirms LED cycle"
+        timeout: 60s
+        fail: "Operator: LED strip did not cycle red, green, blue"
+
+teardown:
+  steps:
+    - command: uart UART3
+      title: "Leave LED strip off"
+      send: "bento ledstrip off\n"

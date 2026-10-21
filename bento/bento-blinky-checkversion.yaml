@@ -1,0 +1,96 @@
+# =============================================================================
+# Title:       Bento Flashing Demo
+# Description: Programs a Bento Board 2 (SUB-67) via Flashr
+#              connected to a PER-101 Test Agent (SKU-7), controlled by a
+#              PLT-106 (SKU-6).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# BOM - Test Station
+# -----------------------------------------------------------------------------
+# SKU    | Model No.            | Model Name
+# -------|----------------------|---------------------------
+# SKU-6  | PLT-106              | Production Line Tool
+# SKU-7  | PER-101              | Test Agent
+# X | X  | Flashr
+# SUB-67 | Bento Board 2        | Device Under Test
+
+# -----------------------------------------------------------------------------
+# Test Station Diagram (TSD)
+# -----------------------------------------------------------------------------
+# Device A | Device A Connector | Cable                    | Device B Connector | Device B
+# ---------|--------------------|--------------------------|--------------------|---------------------
+# SKU-6    | USB-A (Port 1)     | USB-A to USB-C, 1m (—)   | USB-C (PLT port)   | SKU-7
+# SKU-7    | USB-A (Port 2)     | USB-A to USB-B, 1m (—)   | USB-B              | J-Link Base Compact
+# Flashr   | 20-pin Header      | 20-pin to 6-pin TC       | J1 Tag Connect     | SUB-67
+# SKU-6    | USB-A (Port 2)     | USB-A to USB-C, 1m (—)   | USB-C (DUT)        | SUB-67
+
+# -----------------------------------------------------------------------------
+# Test Plan
+# -----------------------------------------------------------------------------
+
+# Flash RP2350B via PER-101 Test Agent and Flashr, then read the app
+# version back over the DUT's Zephyr USB-CDC shell.
+title: "Bento Flashing Demo"
+
+suite:
+  - ident: DEFS
+    title: "Defines"
+    steps:
+      - command: define FIRMWARE.filename "bento_blinky.hex"
+      - command: define AGENT.vidpid "6666:8001"
+      - command: define FIRMWARE.target "rp2350"
+      - command: define DUT.vidpid "2fe3:0004"
+      - command: define DUT.prompt "blinky:~$"
+      - command: define EXPECTED_APP_VERSION "1.0.0"
+
+  - ident: PROG-1
+    title: "Setup Programming Session"
+    steps:
+      - command: usb detect
+        id: "%AGENT.vidpid%"
+        timeout: 30s
+      - command: agentCfg PROGSBC UART2
+        id: "%AGENT.vidpid%"
+        retry: 3
+        with:
+          - "%FIRMWARE.filename%"
+  - ident: PROG-2
+    title: "Program RP2350B via Flashr"
+    steps:
+      - command: agentExec PROGSBC "flashr-flash %FIRMWARE.target% /run/pltagent/mnt/%FIRMWARE.filename%"
+        timeout: 30s
+  - ident: VER-1
+    title: "Connect to Shell and Check Version"
+    steps:
+      - command: usb detect
+        title: "Detect DUT USB-CDC device"
+        id: "%DUT.vidpid%"
+        timeout: 10s
+        fail: "DUT USB-CDC device not detected."
+      - command: uartCfg UART3 115200
+        title: "Configure UART to DUT"
+        id: "%DUT.vidpid%"
+        fail: "Failed to configure UART3 for DUT USB-CDC shell"
+      # The shell is still starting right after the post-flash reset;
+      # a command sent too early comes back garbled. Wait for a prompt.
+      - command: uart UART3
+        title: "Wait for DUT shell prompt"
+        send: "\n"
+        expect: "%DUT.prompt%"
+        timeout: 1s
+        retry: 10
+        fail: "DUT shell did not respond. Check the DUT USB cable to the PLT."
+      - command: uart UART3
+        title: "Query app version"
+        send: "app version\n"
+        # pltrunner matches extract within one line (earlier lines are
+        # dropped as data arrives), so don't anchor on a preceding \r\n.
+        extract: "(\\d+\\.\\d+\\.\\d+\\S*)\r\n"
+        extractKey: APP_VERSION
+        timeout: 2s
+        retry: 2
+        fail: "DUT did not report an app version"
+      - command: eval APP_VERSION == EXPECTED_APP_VERSION
+        title: "Check app version"
+        fail: "DUT app version does not match %EXPECTED_APP_VERSION%. Check the image in FIRMWARE.filename."
