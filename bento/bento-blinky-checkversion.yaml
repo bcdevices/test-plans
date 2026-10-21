@@ -84,8 +84,6 @@ suite:
       - command: uart UART3
         title: "Query app version"
         send: "app version\n"
-        # pltrunner matches extract within one line (earlier lines are
-        # dropped as data arrives), so don't anchor on a preceding \r\n.
         extract: "(\\d+\\.\\d+\\.\\d+\\S*)\r\n"
         extractKey: APP_VERSION
         timeout: 2s
