@@ -24,11 +24,11 @@
 # -----------------------------------------------------------------------------
 # Test Station Diagram (TSD)
 # -----------------------------------------------------------------------------
-# Device A | Device A Connector | Cable                    | Device B Connector | Device B
-# ---------|--------------------|--------------------------|--------------------|---------------------
-# SKU-20   | USB-A (Port 6)     | USB-A to USB-C, 1m (—)  | USB-C (PLT port)   | SKU-7
-# SKU-7    | USB-A (Port 2)     | USB-A to USB-B, 1m (—)  | USB-B              | J-Link Base Compact
-# J-Link   | 20-pin Header      | J1 Tag Connect (—)      | Debug Header       | SUB-3
+# Device A            | Connector      | Cable P/N | Connector        | Device B
+# --------------------|----------------|-----------|------------------|--------------------
+# SKU-20              | USB-A (Port 6) | TBD       | USB-C (PLT port) | SKU-7
+# SKU-7               | USB-A (Port 2) | TBD       | USB-B            | J-Link Base Compact
+# J-Link Base Compact | 20-pin Header  | TBD       | Debug Header     | SUB-3
 
 # -----------------------------------------------------------------------------
 # Test Plan

@@ -1,6 +1,6 @@
 # =============================================================================
 # Title:       Bento App Subsystem Test
-# Description: Exercises the Bento Board 2 (SUB-67) app firmware's peripheral
+# Description: Exercises the Bento Board (SUB-67) app firmware's peripheral
 #              shell commands (app, bento sensor/ledstrip/buzzer) over the
 #              DUT's Zephyr USB-CDC shell, controlled by a PLT-106 (SKU-6).
 #              Expects bento_app.hex to already be flashed
@@ -13,14 +13,14 @@
 # SKU    | Model No.            | Model Name
 # -------|----------------------|---------------------------
 # SKU-6  | PLT-106              | Production Line Tool
-# SUB-67 | Bento Board 2        | Device Under Test
+# SUB-67 | Bento Board          | Device Under Test
 
 # -----------------------------------------------------------------------------
 # Test Station Diagram (TSD)
 # -----------------------------------------------------------------------------
-# Device A | Device A Connector | Cable                    | Device B Connector | Device B
-# ---------|--------------------|--------------------------|--------------------|---------------------
-# SKU-6    | USB-A (Port 2)     | USB-A to USB-C, 1m (—)   | USB-C (DUT)        | SUB-67
+# Device A | Connector          | Cable P/N          | Connector          | Device B
+# ---------|--------------------|--------------------|--------------------|---------
+# SKU-6    | USB-A (Port 2)     | TBD                | USB-C              | SUB-67
 
 # -----------------------------------------------------------------------------
 # Test Plan
@@ -45,7 +45,7 @@ suite:
     steps:
       - command: define DUT.vidpid "2fe3:0004"
       - command: define DUT.prompt "bento:~$"
-      - command: define EXPECTED_APP_VERSION "1.0.0"
+      - command: define EXPECTED_APP_VERSION "1.0.1"
       # BME280 plausibility limits for an indoor test station. Pressure is
       # absolute (not sea-level corrected): ~101 kPa at sea level, ~89 kPa
       # at 1100 m.

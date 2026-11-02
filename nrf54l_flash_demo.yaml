@@ -8,17 +8,19 @@
 # -----------------------------------------------------------------------------
 # BOM - Test Station
 # -----------------------------------------------------------------------------
-# SKU-20   PLT-300A               Production Line Tool controller
-# SKU-7    PER-101 Test Agent     Raspberry Pi 5 running agentOS
-# SUB-75   nRF54L15DK             Device Under Test (DUT)
+# SKU    | Model No.            | Model Name
+# -------|----------------------|---------------------------
+# SKU-20 | PLT-300A             | Production Line Tool
+# SKU-7  | PER-101              | Test Agent
+# SUB-75 | nRF54L15DK           | Device Under Test
 
 # -----------------------------------------------------------------------------
-# Test Station Wiring Diagram
+# Test Station Diagram (TSD)
 # -----------------------------------------------------------------------------
-# SKU A            | SKU A Connector   | Cable              | SKU B Connector   | SKU B
-# -----------------|-------------------|--------------------|-------------------|------------------
-# SKU-20 PLT-300A  | USB-A (Port 6)    | USB-A to USB-C     | USB-C (PLT port)  | SKU-7 PER-101
-# SKU-7  PER-101   | USB-A (Port 2)    | USB-A to USB-C     | USB-C             | SUB-75 nRF54L15DK
+# Device A | Connector          | Cable P/N          | Connector          | Device B
+# ---------|--------------------|--------------------|--------------------|---------
+# SKU-20   | USB-A (Port 6)     | TBD                | USB-C (PLT port)   | SKU-7
+# SKU-7    | USB-A (Port 2)     | TBD                | USB-C              | SUB-75
 
 # -----------------------------------------------------------------------------
 # Test Plan

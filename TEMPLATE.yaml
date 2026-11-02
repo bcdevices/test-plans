@@ -1,0 +1,50 @@
+# =============================================================================
+# Title:       <Plan title; matches the title: key below>
+# Description: <What the plan does to which DUT (SKU), through which
+#              equipment (SKUs), controlled by which PLT (SKU).>
+# Change Log:
+#   v1.0 - Initial version
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# BOM - Test Station
+# -----------------------------------------------------------------------------
+# Every device that appears in the Test Station Diagram, one row each.
+# Use "—" for SKU when the item has no BCD SKU (e.g. third-party equipment).
+#
+# SKU    | Model No.            | Model Name
+# -------|----------------------|---------------------------
+# SKU-6  | PLT-106              | Production Line Tool
+# SKU-7  | PER-101              | Test Agent
+# SUB-xx | <DUT model>          | Device Under Test
+
+# -----------------------------------------------------------------------------
+# Test Station Diagram (TSD)
+# -----------------------------------------------------------------------------
+# One row per cable, five columns, so the table maps 1:1 to a YAML list of
+# {device_a, connector_a, cable_pn, connector_b, device_b} records.
+#
+# - Device A / Device B: the BOM SKU, or the Model No. when SKU is "—".
+# - Connector: the connector on that device, with port number or reference
+#   designator where there is more than one (e.g. "USB-A (Port 1)", "J1").
+# - Cable P/N: the cable's part number only; the connector columns already
+#   describe its ends. "TBD" if not yet assigned; "—" for a direct
+#   connection with no cable (device plugged straight into a port).
+# - Order rows from the PLT outward.
+#
+# Device A | Connector          | Cable P/N          | Connector          | Device B
+# ---------|--------------------|--------------------|--------------------|---------
+# SKU-6    | USB-A (Port 1)     | TBD                | USB-C              | SKU-7
+# SKU-6    | USB-A (Port 2)     | TBD                | USB-C              | SUB-xx
+
+# -----------------------------------------------------------------------------
+# Test Plan
+# -----------------------------------------------------------------------------
+
+title: "<Plan title>"
+
+suite:
+  - ident: DUT-T1
+    title: "<First item>"
+    steps:
+      - command: sleepms 1

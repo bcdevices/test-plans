@@ -1,6 +1,6 @@
 # =============================================================================
 # Title:       Bento App Operator Checks
-# Description: Operator-verified checks of the Bento Board 2 (SUB-67) buzzer
+# Description: Operator-verified checks of the Bento Board (SUB-67) buzzer
 #              and WS2812 LED strip, driven over the DUT's Zephyr USB-CDC
 #              shell by a PLT-106 (SKU-6). The operator confirms each result
 #              with Pass/Fail on the PLT display.
@@ -14,14 +14,14 @@
 # SKU    | Model No.            | Model Name
 # -------|----------------------|---------------------------
 # SKU-6  | PLT-106              | Production Line Tool
-# SUB-67 | Bento Board 2        | Device Under Test
+# SUB-67 | Bento Board          | Device Under Test
 
 # -----------------------------------------------------------------------------
 # Test Station Diagram (TSD)
 # -----------------------------------------------------------------------------
-# Device A | Device A Connector | Cable                    | Device B Connector | Device B
-# ---------|--------------------|--------------------------|--------------------|---------------------
-# SKU-6    | USB-A (Port 2)     | USB-A to USB-C, 1m (—)   | USB-C (DUT)        | SUB-67
+# Device A | Connector          | Cable P/N          | Connector          | Device B
+# ---------|--------------------|--------------------|--------------------|---------
+# SKU-6    | USB-A (Port 2)     | TBD                | USB-C              | SUB-67
 
 # -----------------------------------------------------------------------------
 # Test Plan
