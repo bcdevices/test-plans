@@ -1,0 +1,82 @@
+# =============================================================================
+# Title:       NUCLEO-L011K4 Blinky Flash + Version
+# Description: Programs a NUCLEO-L011K4 (STM32L011K4) with bento-zephyr-fw blinky
+#              through the board's on-board ST-LINK, driven by OpenOCD on a
+#              PER-101 Test Agent, then reads the app version from the
+#              ST-LINK virtual COM port through the Test Agent.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# BOM - Test Station
+# -----------------------------------------------------------------------------
+# SKU    | Model No.            | Model Name
+# -------|----------------------|---------------------------
+# SKU-6  | PLT-106              | Production Line Tool
+# SKU-7  | PER-101              | Test Agent
+# —      | NUCLEO-L011K4        | Device Under Test (on-board ST-LINK/V2-1)
+
+# -----------------------------------------------------------------------------
+# Test Station Diagram (TSD)
+# -----------------------------------------------------------------------------
+# Device A | Connector      | Cable P/N | Connector             | Device B
+# ---------|----------------|-----------|-----------------------|--------------
+# SKU-6    | USB-A (Port 1) | TBD       | USB-C (PLT port)      | SKU-7
+# SKU-7    | USB-A          | TBD       | CN1 Micro-B (ST-LINK) | NUCLEO-L011K4
+
+# -----------------------------------------------------------------------------
+# Test Plan
+# -----------------------------------------------------------------------------
+
+title: "NUCLEO-L011K4 Blinky Flash + Version"
+
+suite:
+  - ident: DEF
+    title: "Defines"
+    steps:
+      - command: define FIRMWARE.filename "nucleo_l011k4_blinky.hex"
+        title: "Set firmware image name"
+      - command: define AGENT.vidpid "6666:8001"
+        title: "Set Test Agent USB ID"
+      - command: define APP.version "1.0.1"
+        title: "Set expected blinky version"
+
+  - ident: AGENT
+    title: "Setup Programming Session"
+    steps:
+      - command: usb detect
+        title: "Detect Test Agent"
+        id: "%AGENT.vidpid%"
+        timeout: 30s
+        fail: "Test Agent not found: check the PLT to Test Agent USB-C cable and that the agent has booted"
+      - command: agentCfg PROGSBC
+        title: "Configure Test Agent and transfer firmware"
+        id: "%AGENT.vidpid%"
+        retry: 3
+        with:
+          - "%FIRMWARE.filename%"
+        fail: "Could not configure the Test Agent or transfer the firmware"
+
+  - ident: IDENT
+    title: "Identify Target"
+    steps:
+      - command: agentExec PROGSBC "lsusb -d 0483:374b"
+        title: "ST-LINK present on Test Agent"
+        timeout: 5s
+        fail: "ST-LINK not found: check the Test Agent to Nucleo CN1 USB cable"
+
+  - ident: PROG
+    title: "Program STM32L011K4"
+    steps:
+      - command: agentExec PROGSBC "openocd -f interface/stlink.cfg -c 'transport select swd' -f target/stm32l0.cfg -c 'reset_config srst_only srst_nogate connect_assert_srst' -c 'program /run/pltagent/mnt/%FIRMWARE.filename% verify reset exit'"
+        title: "Program, verify and reset"
+        timeout: 60s
+        fail: "Programming or verify failed: check the ST-LINK connection and retry"
+
+  - ident: VERSION
+    title: "Check App Version"
+    steps:
+      - command: agentExec PROGSBC "T=$(ls /dev/serial/by-id/usb-STMicroelectronics_STM32_STLink_* | head -n1); stty -F $T 115200 raw -echo; (sleep 1; echo version > $T) & timeout 5 grep -a -m1 'app:[ ]*blinky %APP.version%' $T"
+        title: "Query app version over ST-LINK VCP"
+        timeout: 10s
+        retry: 2
+        fail: "DUT did not report the expected blinky version on the ST-LINK VCP: check the programmed image"
