@@ -45,7 +45,7 @@ suite:
     steps:
       - command: define DUT.vidpid "2fe3:0004"
       - command: define DUT.prompt "bento:~$"
-      - command: define EXPECTED_APP_VERSION "1.0.1"
+      - command: define EXPECTED_APP_VERSION "1.0.2"
       # BME280 plausibility limits for an indoor test station. Pressure is
       # absolute (not sea-level corrected): ~101 kPa at sea level, ~89 kPa
       # at 1100 m.

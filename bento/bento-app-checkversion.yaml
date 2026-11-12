@@ -42,7 +42,7 @@ suite:
       - command: define FIRMWARE.target "rp2350"
       - command: define DUT.vidpid "2fe3:0004"
       - command: define DUT.prompt "bento:~$"
-      - command: define EXPECTED_APP_VERSION "1.0.1"
+      - command: define EXPECTED_APP_VERSION "1.0.2"
 
   - ident: PROG-1
     title: "Setup Programming Session"

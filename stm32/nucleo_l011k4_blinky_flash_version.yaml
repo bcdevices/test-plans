@@ -37,7 +37,7 @@ suite:
         title: "Set firmware image name"
       - command: define AGENT.vidpid "6666:8001"
         title: "Set Test Agent USB ID"
-      - command: define APP.version "1.0.1"
+      - command: define APP.version "1.0.2"
         title: "Set expected blinky version"
 
   - ident: AGENT

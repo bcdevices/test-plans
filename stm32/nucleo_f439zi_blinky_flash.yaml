@@ -33,7 +33,7 @@ suite:
   - ident: DEF
     title: "Defines"
     steps:
-      - command: define FIRMWARE.filename "nucleo_f439zi_blinky.hex"
+      - command: define FIRMWARE.filename "nucleo_f439zi_blinky_uart.hex"
         title: "Set firmware image name"
       - command: define AGENT.vidpid "6666:8001"
         title: "Set Test Agent USB ID"
