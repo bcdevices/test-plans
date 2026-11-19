@@ -1,0 +1,86 @@
+# =============================================================================
+# Title:       Bento App Buzzer Play: 50 Notes
+# Description: Sends a 50-note RTTTL tune in one "bento buzzer play"
+#              command over a Bento Board (SUB-67) Zephyr USB-CDC shell,
+#              controlled by a PLT-106 (SKU-6). No programming step:
+#              expects bento_app.hex with bento buzzer play already flashed
+#              (see bento-app-buzzer-flash-play.yaml).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# BOM - Test Station
+# -----------------------------------------------------------------------------
+# SKU    | Model No.            | Model Name
+# -------|----------------------|---------------------------
+# SKU-6  | PLT-106              | Production Line Tool
+# SUB-67 | Bento Board          | Device Under Test
+
+# -----------------------------------------------------------------------------
+# Test Station Diagram (TSD)
+# -----------------------------------------------------------------------------
+# Device A | Connector          | Cable P/N          | Connector          | Device B
+# ---------|--------------------|--------------------|--------------------|---------
+# SKU-6    | USB-A (Port 2)     | TBD                | USB-C              | SUB-67
+
+# -----------------------------------------------------------------------------
+# Test Plan
+# -----------------------------------------------------------------------------
+
+# The tune lives in this plan, not the firmware:
+#   <name>:d=<default duration>,o=<default octave>,b=<bpm>:<notes>
+# Each note is [duration]<a-g|h|p>[#][.][octave][.].
+#
+# TUNE is a synthetic 50-note test pattern, not a song. It uses every note
+# form (durations 4/8/16, sharps, dots, octaves 4-7, h, pauses) and has an
+# explicit octave on every note, so the command line is 279 bytes: over
+# Zephyr's stock 256-byte shell command buffer, under the 512 bytes the app
+# configures (CONFIG_SHELL_CMD_BUFF_SIZE). An image built without that
+# setting cuts the line short and fails this test. 50 notes, 8.3 s at
+# 180 BPM.
+# "bento buzzer play" blocks until the tune ends, then prints
+# "played <n> notes" (n counts pauses too). The DUT echoes each command, and
+# "played <n> notes" never appears in the echo, so the match is on the
+# response. The buzzer has no feedback path to the PLT, so this checks that
+# the firmware played the tune, not that sound came out.
+title: "Bento App Buzzer Play: 50 Notes"
+
+suite:
+  - ident: DEFS
+    title: "Defines"
+    steps:
+      - command: define DUT.vidpid "2fe3:0004"
+      - command: define DUT.prompt "bento:~$"
+      - command: define TUNE "fifty:d=8,o=5,b=180:8c5,16f6,8a#5,4d#5.,16g#7,8c#6,8f#4,16h5,8e5,16p,16d5.,8g5,8c7,16f6,8a#4,4d#5,16g#5,8c#6.,8f#5,16p,8e7,4a6,16d4,8g5,8c5.,16f6,8a#5,4d#5,16g#7,16p,8f#4,16h5.,8e5,4a6,16d5,8g5,8c7,16f6,8a#4.,16p,16g#5,8c#6,8f#5,16h5,8e7,4a6.,16d4,8g5,8c5,16p"
+
+  - ident: CONN
+    title: "Connect to DUT Shell"
+    steps:
+      - command: usb detect
+        title: "Detect DUT USB-CDC device"
+        id: "%DUT.vidpid%"
+        timeout: 10s
+        fail: "DUT USB-CDC device not detected. Check the DUT USB cable to PLT Port 2."
+      - command: uartCfg UART3 115200
+        title: "Configure UART to DUT"
+        id: "%DUT.vidpid%"
+        fail: "Failed to configure UART3 for DUT USB-CDC shell"
+      # A command sent before the shell is up comes back garbled. Wait for
+      # a prompt.
+      - command: uart UART3
+        title: "Wait for DUT shell prompt"
+        send: "\n"
+        expect: "%DUT.prompt%"
+        timeout: 1s
+        retry: 10
+        fail: "DUT shell did not respond with the bento prompt."
+
+  - ident: PLAY
+    title: "Play 50-Note Tune"
+    steps:
+      # Quote the tune so the shell passes it as one argument.
+      - command: uart UART3
+        title: "Play 50-note RTTTL tune"
+        send: "bento buzzer play \"%TUNE%\"\n"
+        expect: "played 50 notes"
+        timeout: 15s
+        fail: "Tune did not finish with 'played 50 notes'. 'bad rtttl' means TUNE is malformed or the line was cut short (check CONFIG_SHELL_CMD_BUFF_SIZE >= 512); 'command not found' means the image predates bento buzzer play."

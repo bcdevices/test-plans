@@ -1,0 +1,81 @@
+# =============================================================================
+# Title:       Bento App Buzzer Play: O Christmas Tree
+# Description: Connects to a Bento Board (SUB-67), then O Christmas Tree
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# BOM - Test Station
+# -----------------------------------------------------------------------------
+# SKU    | Model No.            | Model Name
+# -------|----------------------|---------------------------
+# SKU-6  | PLT-106              | Production Line Tool
+# SKU-7  | PER-101              | Test Agent
+# SKU-28 | PER-401              | Flashr
+# SUB-67 | Bento Board          | Device Under Test
+
+# -----------------------------------------------------------------------------
+# Test Station Diagram (TSD)
+# -----------------------------------------------------------------------------
+# Device A | Connector          | Cable P/N          | Connector          | Device B
+# ---------|--------------------|--------------------|--------------------|---------
+# SKU-6    | USB-A (Port 1)     | TBD                | USB-C (PLT port)   | SKU-7
+# SKU-7    | USB-A (Port 2)     | TBD                | USB                | SKU-28
+# SKU-28   | 20-pin Header      | TBD                | J1 Tag-Connect     | SUB-67
+# SKU-6    | USB-A (Port 2)     | TBD                | USB-C              | SUB-67
+
+# -----------------------------------------------------------------------------
+# Test Plan
+# -----------------------------------------------------------------------------
+
+# The tune lives in this plan, not the firmware: RTTTL is
+#   <name>:d=<default duration>,o=<default octave>,b=<bpm>:<notes>
+# Each note is [duration]<a-g|p>[#][.][octave]. This is the first line of
+# "O Tannenbaum" (traditional), in G major, 3/4: 15 notes, 6.9 s at 100 BPM.
+# "bento buzzer play" blocks until the tune ends, then prints
+# "played <n> notes". The buzzer has no feedback path to the PLT, so this
+# checks that the firmware played the tune, not that sound came out.
+title: "Bento App Buzzer Play: O Christmas Tree"
+
+suite:
+  - ident: DEFS
+    title: "Defines"
+    steps:
+      - command: define AGENT.vidpid "6666:8001"
+      - command: define DUT.vidpid "2fe3:0004"
+      - command: define DUT.prompt "bento:~$"
+      - command: define TUNE "tree:d=4,o=5,b=100:8d,8g.,16g,g.,8a,8b.,16b,b.,8b,8a,8b,c6,f#,a,g"
+
+  - ident: CONN
+    title: "Connect to DUT Shell"
+    steps:
+      - command: usb detect
+        title: "Detect DUT USB-CDC device"
+        id: "%DUT.vidpid%"
+        timeout: 10s
+        fail: "DUT USB-CDC device not detected. Check the DUT USB cable to PLT Port 2."
+      - command: uartCfg UART3 115200
+        title: "Configure UART to DUT"
+        id: "%DUT.vidpid%"
+        fail: "Failed to configure UART3 for DUT USB-CDC shell"
+      # The shell is still starting right after the post-flash reset;
+      # a command sent too early comes back garbled. Wait for a prompt.
+      - command: uart UART3
+        title: "Wait for DUT shell prompt"
+        send: "\n"
+        expect: "%DUT.prompt%"
+        timeout: 1s
+        retry: 10
+        fail: "DUT shell did not respond with the bento prompt."
+
+  - ident: PLAY
+    title: "Play O Christmas Tree"
+    steps:
+      # Quote the tune so the shell passes it as one argument. 6.9 s tune;
+      # the timeout leaves room for USB latency. "played 15 notes" does not
+      # appear in the echoed command line, so the match is on the response.
+      - command: uart UART3
+        title: "Play O Christmas Tree (RTTTL)"
+        send: "bento buzzer play \"%TUNE%\"\n"
+        expect: "played 15 notes"
+        timeout: 15s
+        fail: "Tune did not finish with 'played 15 notes'. 'bad rtttl' means the TUNE string is malformed; 'command not found' means the image predates bento buzzer play."

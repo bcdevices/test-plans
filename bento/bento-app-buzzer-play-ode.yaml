@@ -1,0 +1,75 @@
+# =============================================================================
+# Title:       Bento App Buzzer Play: Ode to Joy
+# Description: Plays the firmware's built-in "ode" tune with
+#              "bento buzzer play ode" over a Bento Board (SUB-67) Zephyr
+#              USB-CDC shell, controlled by a PLT-106 (SKU-6). No
+#              programming step: expects bento_app.hex with bento buzzer
+#              play already flashed (see bento-app-buzzer-flash-play.yaml).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# BOM - Test Station
+# -----------------------------------------------------------------------------
+# SKU    | Model No.            | Model Name
+# -------|----------------------|---------------------------
+# SKU-6  | PLT-106              | Production Line Tool
+# SUB-67 | Bento Board          | Device Under Test
+
+# -----------------------------------------------------------------------------
+# Test Station Diagram (TSD)
+# -----------------------------------------------------------------------------
+# Device A | Connector          | Cable P/N          | Connector          | Device B
+# ---------|--------------------|--------------------|--------------------|---------
+# SKU-6    | USB-A (Port 2)     | TBD                | USB-C              | SUB-67
+
+# -----------------------------------------------------------------------------
+# Test Plan
+# -----------------------------------------------------------------------------
+
+# "ode" is a built-in tune, the opening of Beethoven's "Ode to Joy":
+# 15 notes, 7 s at 140 BPM.
+# "bento buzzer play" blocks until the tune ends, then prints
+# "played <n> notes" (n counts pauses too). The DUT echoes each command, and
+# "played <n> notes" never appears in the echo, so the match is on the
+# response. The buzzer has no feedback path to the PLT, so this checks that
+# the firmware played the tune, not that sound came out.
+title: "Bento App Buzzer Play: Ode to Joy"
+
+suite:
+  - ident: DEFS
+    title: "Defines"
+    steps:
+      - command: define DUT.vidpid "2fe3:0004"
+      - command: define DUT.prompt "bento:~$"
+
+  - ident: CONN
+    title: "Connect to DUT Shell"
+    steps:
+      - command: usb detect
+        title: "Detect DUT USB-CDC device"
+        id: "%DUT.vidpid%"
+        timeout: 10s
+        fail: "DUT USB-CDC device not detected. Check the DUT USB cable to PLT Port 2."
+      - command: uartCfg UART3 115200
+        title: "Configure UART to DUT"
+        id: "%DUT.vidpid%"
+        fail: "Failed to configure UART3 for DUT USB-CDC shell"
+      # A command sent before the shell is up comes back garbled. Wait for
+      # a prompt.
+      - command: uart UART3
+        title: "Wait for DUT shell prompt"
+        send: "\n"
+        expect: "%DUT.prompt%"
+        timeout: 1s
+        retry: 10
+        fail: "DUT shell did not respond with the bento prompt."
+
+  - ident: PLAY
+    title: "Play Ode to Joy"
+    steps:
+      - command: uart UART3
+        title: "Play 'ode' by name"
+        send: "bento buzzer play ode\n"
+        expect: "played 15 notes"
+        timeout: 15s
+        fail: "'ode' did not finish with 'played 15 notes'. 'unknown tune' or 'command not found' means the image predates play-by-name; run bento-app-buzzer-flash-play.yaml."
